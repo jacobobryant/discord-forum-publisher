@@ -1,0 +1,3 @@
+{:paths ["src" "resources" "target/resources"]
+ :deps {com.biffweb/biff {:git/url "https://github.com/jacobobryant/biff" :sha "540dc03e6494c2ef6534bcf6023e08215f7cc3dc"}
+        org.slf4j/slf4j-simple {:mvn/version "2.0.0-alpha5"}}}
