@@ -1,5 +1,5 @@
-# Biff example project
+# Discord Forum Publisher
 
-This is the example/template project for Biff.
+Host public copies of Discord forum channels.
 
 Run `bb dev` to get started. See `bb tasks` for other commands.

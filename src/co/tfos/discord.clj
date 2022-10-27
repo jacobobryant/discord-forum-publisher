@@ -1,9 +1,7 @@
 (ns co.tfos.discord
   (:require [com.biffweb :as biff]
-            [co.tfos.discord.feat.app :as app]
-            [co.tfos.discord.feat.auth :as auth]
             [co.tfos.discord.feat.home :as home]
-            [co.tfos.discord.feat.worker :as worker]
+            [co.tfos.discord.feat.sync :as sync]
             [co.tfos.discord.schema :refer [malli-opts]]
             [clojure.java.io :as io]
             [clojure.string :as str]
@@ -13,10 +11,8 @@
             [nrepl.cmdline :as nrepl-cmd]))
 
 (def features
-  [app/features
-   auth/features
-   home/features
-   worker/features])
+  [home/features
+   sync/features])
 
 (def routes [["" {:middleware [anti-forgery/wrap-anti-forgery
                                biff/wrap-anti-forgery-websockets
@@ -30,10 +26,9 @@
 (def static-pages (apply biff/safe-merge (map :static features)))
 
 (defn generate-assets! [sys]
-  (when (:co.tfos.discord/enable-web sys)
-    (biff/export-rum static-pages "target/resources/public")
-    (biff/delete-old-files {:dir "target/resources/public"
-                            :exts [".html"]})))
+  (biff/export-rum static-pages "target/resources/public")
+  (biff/delete-old-files {:dir "target/resources/public"
+                          :exts [".html"]}))
 
 (defn on-save [sys]
   (biff/add-libs)
@@ -47,21 +42,16 @@
    biff/use-xt
    biff/use-queues
    biff/use-tx-listener
-   (biff/use-when
-    :co.tfos.discord/enable-web
-    biff/use-outer-default-middleware
-    biff/use-jetty)
-   (biff/use-when
-    :co.tfos.discord/enable-worker
-    biff/use-chime)
+   biff/use-outer-default-middleware
+   biff/use-jetty
+   biff/use-chime
    (biff/use-when
     :co.tfos.discord/enable-beholder
     biff/use-beholder)])
 
 (defn start []
   (biff/start-system
-   {:co.tfos.discord/chat-clients (atom #{})
-    :biff/features #'features
+   {:biff/features #'features
     :biff/after-refresh `start
     :biff/handler #'handler
     :biff/malli-opts #'malli-opts
