@@ -209,15 +209,21 @@
      {}
      [:h1.text-2xl "Discord Forum Publisher"]
      [:p "By " [:a.link {:href "https://tfos.co"} "Jacob O'Bryant"]]
-     [:.h-4]
      [:p "This website hosts public copies of Discord forum channels. "
       "You can add your own Discord server by installing the "
       [:a.link {:href invite-url}
        "Forum Publisher bot"]
       ". " [:strong "Important:"] " If you have a non-expiring invite link, it will be published too."]
-     [:.h-3]
      [:p "Non-forum channels will not be published. Forum channels are synced every 30 minutes. "
       "To remove your server from this website, remove the Forum Publisher bot from your server."]
+     [:p [:a.link {:href "https://github.com/jacobobryant/discord-forum-publisher"}
+          "Source code"]
+      ui/interpunct
+      [:a.link {:href "https://github.com/jacobobryant/discord-forum-publisher/issues"}
+       "Issues"]
+      ui/interpunct
+      [:a.link {:href "https://discord.tfos.co/thread/1034195503849689148"}
+       "Rationale"]]
      [:.h-6]
      [:hr]
      [:.h-6]
