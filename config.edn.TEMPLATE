@@ -1,0 +1,22 @@
+;; vim: ft=clojure
+{:prod {:biff.xtdb/dir "storage/xtdb"
+        :biff.xtdb/topology :standalone
+        :biff/base-url nil ; required
+        :biff.middleware/cookie-secret nil ; required
+        :biff/jwt-secret nil ; required
+        :discord/token nil ; required
+        :discord/invite-url nil ; required
+        }
+ :dev {:merge [:prod]
+       :co.tfos.discord/enable-beholder true
+       :biff/host "0.0.0.0"
+       :biff/port 8080
+       :biff/base-url "http://localhost:8080"
+       :biff.xtdb/topology :standalone
+       :biff.middleware/secure false}
+ :tasks {:biff.tasks/main-ns co.tfos.discord
+         :biff.tasks/soft-deploy-fn co.tfos.discord/on-save
+         :biff.tasks/deploy-from "master"
+         :biff.tasks/deploy-to "prod"
+         :biff.tasks/server nil ; required
+         }}
