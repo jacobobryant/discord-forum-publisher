@@ -69,4 +69,4 @@
 
 (def features
   {:tasks [{:task #'sync-discord!
-            :schedule #(every-n-minutes 30)}]})
+            :schedule #(every-n-minutes 10)}]})

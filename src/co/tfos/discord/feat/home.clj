@@ -283,7 +283,7 @@
       [:a.link {:href invite-url}
        "Forum Publisher bot"]
       ". " [:strong "Important:"] " If you have a non-expiring invite link, it will be published too."]
-     [:p "Non-forum channels will not be published. Forum channels are synced every 30 minutes. "
+     [:p "Non-forum channels will not be published. Forum channels are synced every 10 minutes. "
       "To remove your server from this website, remove the Forum Publisher bot from your server."]
      [:p [:a.link {:href "https://github.com/jacobobryant/discord-forum-publisher"}
           "Source code"]

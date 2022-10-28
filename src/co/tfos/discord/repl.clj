@@ -11,7 +11,7 @@
   ;; terminal. It may not be necessary in your editor.
   (biff/fix-print (biff/refresh))
 
-  (time (sync-discord! (get-sys)))
+  (time (co.tfos.discord.feat.sync/sync-discord! (get-sys)))
 
   (let [{:keys [biff/db] :as sys} (get-sys)]
     )
