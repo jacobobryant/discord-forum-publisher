@@ -2,30 +2,9 @@
   (:require [com.biffweb :as biff :refer [q]]
             [clojure.string :as str]
             [co.tfos.discord.ui :as ui]
-            [xtdb.api :as xt]))
-
-; "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>"
-
-#_(defn atom-feed [{:keys [posts path site] :as opts}]
-    (let [feed-url (str (:url site) path)
-          posts (remove #(contains? (:tags %) "unlisted") posts)]
-      [:feed {:xmlns "http://www.w3.org/2005/Atom"}
-       [:title (:title site)]
-       [:id (url-encode feed-url)]
-       [:updated (format-date (:published-at (first posts)))]
-       [:link {:rel "self" :href feed-url :type "application/atom+xml"}]
-       [:link {:href (:url site)}]
-       (for [post (take 10 posts)
-             :let [url (str (:url site) "/p/" (:slug post) "/")]]
-         [:entry
-          [:title {:type "html"} (:title post)]
-          [:id (url-encode url)]
-          [:updated (format-date (:published-at post))]
-          [:content {:type "html"} (:html post)]
-          [:link {:href url}]
-          [:author
-           [:name (:author-name site)]
-           [:uri (:author-url site)]]])]))
+            [xtdb.api :as xt]
+            [lambdaisland.uri :as uri]
+            [rum.core :as rum]))
 
 (defn user [{:keys [biff/db path-params]}]
   (let [messages (->> (q db
@@ -53,11 +32,6 @@
       [:a.link {:href "/"} "Home"]
       " > "
       "@" (:username author)]
-     #_[:.h-6]
-     #_[:div "Subscribe: "
-        [:a.link {:href "#"} "RSS"]
-        ui/interpunct
-        [:a.link {:href "#"} "Email"]]
      [:.h-6]
      (biff/join
       (list
@@ -90,7 +64,7 @@
              [:a.text-sm.link {:href (str "https://discord.gg/" (:discord.invite/code invite))}
               "Join this server"]))]])))))
 
-(defn thread [{:keys [biff/db path-params]}]
+(defn thread-feed [{:keys [biff/db biff/base-url path-params uri]}]
   (let [{:discord.thread/keys [guild_id parent_id id]
          thread-name :discord.thread/name
          :as thread} (xt/entity db (keyword "discord.thread.id" (:id path-params)))
@@ -108,9 +82,91 @@
                    '{:find (pull invite [*])
                      :in [guild]
                      :where [[invite :discord.invite/guild_id guild]]}
-                   guild_id))]
+                   guild_id))
+        feed-url (str base-url uri)
+        url (str/replace feed-url #"/feed.xml$" "")]
+    {:status 200
+     :headers {"Content-Type" "application/atom+xml"}
+     :body
+     (str
+      "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>"
+      (rum/render-static-markup
+       [:feed {:xmlns "http://www.w3.org/2005/Atom"}
+        [:title thread-name " ("
+         (:discord.guild/name guild) " > " (:discord.channel/name channel) ")"]
+        [:id url]
+        [:updated (:discord.message/timestamp (first messages))]
+        [:link {:rel "self" :href feed-url :type "application/atom+xml"}]
+        [:link {:href url}]
+        (for [{:discord.message/keys [author content timestamp id channel_id author_id]} (take 30 messages)
+              :let [handle (str "@" (:username author))]]
+          [:entry
+           [:title handle " in " thread-name]
+           [:id (str url "#" id)]
+           [:updated timestamp]
+           [:content {:type "html"}
+            (rum/render-static-markup
+             [:div
+              [:p [:a {:style {:font-weight "bold"
+                               :color "black"}
+                       :href (str base-url "/user/" author_id)}
+                   handle]
+               " " [:a {:style {:color "#4b5563"}
+                        :href (str "#" id)}
+                    (-> timestamp
+                        biff/parse-date
+                        (biff/format-date "d MMM yyyy, hh:mm a z"))]]
+              [:div {:style {:height "0.25rem"}}]
+              [:p {:style {:whitespace "pre-wrap"}} content]
+              [:div {:style {:height "0.25rem"}}]
+              [:p {:font-size "87.5rem"
+                   :line-height "1.25rem"}
+               [:a {:href (str "https://discord.com/channels/"
+                               (:discord.guild/id guild) "/"
+                               channel_id "/"
+                               id)}
+                "View on Discord"]
+               (when invite
+                 (list
+                  ui/interpunct
+                  [:a {:href (str "https://discord.gg/" (:discord.invite/code invite))}
+                   "Join this server"]))]])]
+           [:link {:href url}]
+           [:author
+            [:name handle]
+            [:uri (str base-url "/users/" author_id)]]])]))}))
+
+(defn thread [{:keys [biff/db path-params biff/base-url uri]}]
+  (let [{:discord.thread/keys [guild_id parent_id id]
+         thread-name :discord.thread/name
+         :as thread} (xt/entity db (keyword "discord.thread.id" (:id path-params)))
+        guild (xt/entity db (keyword "discord.guild.id" guild_id))
+        channel (xt/entity db (keyword "discord.channel.id" parent_id))
+        messages (sort-by
+                  :discord.message/timestamp
+                  (q db
+                     '{:find (pull message [*])
+                       :in [thread]
+                       :where [[message :discord.message/channel_id thread]]}
+                     id))
+        invite (first
+                (q db
+                   '{:find (pull invite [*])
+                     :in [guild]
+                     :where [[invite :discord.invite/guild_id guild]]}
+                   guild_id))
+        feed-url (str base-url uri "/feed.xml")
+        subscribe [:div "Subscribe: "
+                   [:a.link {:href feed-url} "RSS"]
+                   ui/interpunct
+                   [:a.link {:href (str (uri/assoc-query "https://feedrabbit.com" :url feed-url))}
+                    "Email"]]]
     (ui/page
-     {:base/title thread-name}
+     {:base/title thread-name
+      :base/head [[:link {:href feed-url
+                          :rel "alternate"
+                          :title (str "Feed for " thread-name)
+                          :type "application/atom+xml"}]]}
      [:div
       [:a.link {:href "/"} "Home"]
       " > "
@@ -121,6 +177,8 @@
        (:discord.channel/name channel)]
       " > "
       thread-name]
+     [:.h-6]
+     subscribe
      [:.h-6]
      (biff/join
       (list
@@ -149,7 +207,9 @@
             (list
              ui/interpunct
              [:a.text-sm.link {:href (str "https://discord.gg/" (:discord.invite/code invite))}
-              "Join this server"]))]])))))
+              "Join this server"]))]]))
+     [:.h-6]
+     subscribe)))
 
 (defn channel [{:keys [biff/db path-params]}]
   (let [{:discord.channel/keys [guild_id id]
@@ -238,4 +298,5 @@
             ["/server/:id" {:get guild}]
             ["/channel/:id" {:get channel}]
             ["/thread/:id" {:get thread}]
+            ["/thread/:id/feed.xml" {:get thread-feed}]
             ["/user/:id" {:get user}]]})

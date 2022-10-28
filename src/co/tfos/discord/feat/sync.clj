@@ -10,11 +10,11 @@
 
 (defn api [{:keys [discord/token]} method url & [options]]
   (Thread/sleep 100)
-  (http/request (-> options
-                    (assoc-in [:headers "Authorization"] (str "Bot " token))
-                    (assoc :as :json
-                           :url (str "https://discord.com/api" url)
-                           :method method))))
+  (http/request (-> {:as :json
+                     :url (str "https://discord.com/api" url)
+                     :method method}
+                    (merge options)
+                    (assoc-in [:headers "Authorization"] (str "Bot " token)))))
 
 (defn sync-discord! [{:keys [biff/db discord/token] :as sys}]
   (log/info "start syncing")
