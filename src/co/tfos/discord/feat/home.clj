@@ -64,6 +64,15 @@
              [:a.text-sm.link {:href (str "https://discord.gg/" (:discord.invite/code invite))}
               "Join this server"]))]])))))
 
+(defn render-message [db text]
+  (str/replace
+   text
+   #"<#(\d+)>"
+   (fn [[orig id]]
+     (if-some [thread (xt/entity db (keyword "discord.thread.id" id))]
+       (str "[[" (:discord.thread/name thread) "]]")
+       orig))))
+
 (defn thread-feed [{:keys [biff/db biff/base-url path-params uri]}]
   (let [{:discord.thread/keys [guild_id parent_id id]
          thread-name :discord.thread/name
@@ -117,7 +126,7 @@
                         biff/parse-date
                         (biff/format-date "d MMM yyyy, hh:mm a z"))]]
               [:div {:style {:height "0.25rem"}}]
-              [:p {:style {:whitespace "pre-wrap"}} content]
+              [:p {:style {:whitespace "pre-wrap"}} (render-message db content)]
               [:div {:style {:height "0.25rem"}}]
               [:p {:font-size "87.5rem"
                    :line-height "1.25rem"}
@@ -195,7 +204,7 @@
                    biff/parse-date
                    (biff/format-date "d MMM yyyy, hh:mm a z" ))]]
          [:.h-1]
-         [:.whitespace-pre-wrap content]
+         [:.whitespace-pre-wrap (render-message db content)]
          [:.h-1]
          [:div
           [:a.text-sm.link {:href (str "https://discord.com/channels/"
