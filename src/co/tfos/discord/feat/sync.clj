@@ -27,7 +27,8 @@
                       :let [invite (->> channels
                                         (sort-by :position)
                                         (mapcat (fn [{:keys [id]}]
-                                                  (:body (api sys :get (str "/channels/" id "/invites")))))
+                                                  (biff/catchall-verbose
+                                                   (:body (api sys :get (str "/channels/" id "/invites"))))))
                                         (remove :expires_at)
                                         first)]
                       :when invite]
